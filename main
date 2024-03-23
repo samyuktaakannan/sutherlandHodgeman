@@ -1,0 +1,339 @@
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <GL/glut.h>
+#include <stdlib.h>
+#include <iostream>
+#include <vector>
+#define SCREEN_HEIGHT 480
+#define SCREEN_WIDTH 640
+
+using namespace std;
+
+vector <pair<float, float> > window;
+vector <pair<float, float> > polygon;
+vector <pair<float, float> > res;
+vector <pair<float, float> > temp;
+
+int winVertices = 0;
+int polyVertices = 0;
+float xwMin, xwMax, ywMin, ywMax;
+
+void init()
+{
+    glClearColor(0, 0, 0, 1);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0, 640, 0, 480);
+}
+
+static void display(void)
+{
+    glClear(GL_COLOR_BUFFER_BIT);
+    glFlush();
+}
+
+void drawWindow()
+{
+    glColor3f(1, 1, 1);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glBegin(GL_POLYGON);
+        glVertex2f(xwMin,ywMin);
+        glVertex2f(xwMax,ywMin);
+        glVertex2f(xwMax,ywMax);
+        glVertex2f(xwMin,ywMax);
+    glEnd();
+    glFlush();
+}
+
+void drawPolygon(vector<pair<float, float> > polygon)
+{
+    glColor3f(0, 0, 1);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glBegin(GL_POLYGON);
+        for(int i=0; i<polygon.size(); i++)
+        {
+            glVertex2f(polygon[i].first, polygon[i].second);
+        }
+    glEnd();
+    glFlush();
+}
+
+void clipPoints(float x1, float y1, float x2, float y2, int ch)
+{
+    switch(ch)
+    {
+        //left
+        case 1:
+            cout << "Left : "<<endl;
+            //IN-IN
+            if(x1 >= xwMin && x2 >= xwMin)
+            {
+                cout << "IN-IN" <<endl;
+                cout << "x2 : " << x2 << " y2 : " << y2 << endl;
+                res.push_back(make_pair(x2, y2));
+            }
+            //in-out
+            else if(x1 >= xwMin && x2<xwMin)
+            {
+                cout << "IN-OUT" <<endl;
+                float slope = (y2 - y1)/(x2 - x1);
+                float intersect_x = xwMin;
+                float intersect_y = y2 + (xwMin - x2) * slope;
+                cout << "Intersect x : " << intersect_x << " Intersect y : " << intersect_y << endl;
+                res.push_back(make_pair(intersect_x, intersect_y));
+            }
+            //out-in
+            else if(x1 < xwMin && x2>=xwMin )
+            {
+                cout << "OUT-IN" <<endl;
+                float slope = (y2 - y1)/(x2 - x1);
+                float intersect_x = xwMin;
+                float intersect_y = y2 + (xwMin - x2) * slope;
+                cout << "Intersect x : " << intersect_x << " Intersect_y : " << intersect_y  << " x2 : " << x2 << " y2 : " << y2 << endl;
+                res.push_back(make_pair(intersect_x, intersect_y));
+                res.push_back(make_pair(x2, y2));
+            }
+            //out-out
+            else
+            {
+                cout << "OUT - OUT" <<endl;
+                cout << "{}"<< endl;
+            }
+            break;
+        //Right
+        case 2:
+            cout << "Right :" << endl;
+            //IN-IN
+            if(x1 <= xwMax && x2 <= xwMax)
+            {
+                cout << "IN-IN" <<endl;
+                cout << "x2 : " << x2 << " y2 : " << y2 << endl;
+                res.push_back(make_pair(x2, y2));
+            }
+            else if(x1 <= xwMax && x2>xwMax )
+            {//in-out
+                cout << "IN-OUT" <<endl;
+                float slope = (y2 - y1)/(x2 - x1);
+                float intersect_x = xwMax;
+                float intersect_y = y2 + (xwMax - x2) * slope;
+                cout << "Intersect x : " << intersect_x << " Intersect_y : " << intersect_y << endl;
+                res.push_back(make_pair(intersect_x, intersect_y));
+            }
+            else if(x1 > xwMax && x2<=xwMax )
+            {//out-in
+                cout << "OUT-IN" <<endl;
+                float slope = (y2 - y1)/(x2 - x1);
+                float intersect_x = xwMax;
+                float intersect_y = y2 + (xwMax - x2) * slope;
+                cout << "Intersect x : " << intersect_x << " Intersect_y : " << intersect_y  << " x2 : " << x2 << " y2 : " << y2 << endl;
+                res.push_back(make_pair(intersect_x, intersect_y));
+                res.push_back(make_pair(x2, y2));
+            }
+            else
+            {
+                cout << "OUT - OUT" <<endl;
+                cout << "{}" << endl;
+            }
+            break;
+        //Bottom
+        case 3:
+            cout << "Bottom : " << endl;
+            float intersect_x, intersect_y;
+            //IN-IN
+            if(y1 >= ywMin && y2 >= ywMin)
+            {
+                cout << "IN-IN" <<endl;
+                cout << "x2 : " << x2 << " y2 : " << y2 << endl;
+                res.push_back(make_pair(x2, y2));
+            }
+            else if(y1 >= ywMin && y2<ywMin)
+            {//in-out
+                cout << "IN-OUT" <<endl;
+                float slope = (y2 - y1)/(x2 - x1);
+                intersect_y = ywMin;
+                if(x1 != x2)
+                    intersect_x = x2 + (ywMin - y2)/slope;
+                else
+                    intersect_x = x2;
+                cout << "Intersect x : " << intersect_x << " Intersect y : " << intersect_y << endl;
+                res.push_back(make_pair(intersect_x, intersect_y));
+            }
+            else if(y1 < ywMin && y2>=ywMin )
+            {//out-in
+                cout << "OUT-IN" <<endl;
+                float slope = (y2 - y1)/(x2 - x1);
+                intersect_y = ywMin;
+                if(x1 != x2)
+                    intersect_x = x2 + (ywMin - y2)/slope;
+                else
+                    intersect_x = x2;
+                cout << "Intersect x : " << intersect_x << " Intersect y : " << intersect_y  << " x2 : " << x2 << " y2 : " << y2 << endl;
+                res.push_back(make_pair(intersect_x, intersect_y));
+                res.push_back(make_pair(x2, y2));
+            }
+            else
+            {
+                cout << "OUT - OUT" <<endl;
+                cout << "{}" << endl;
+            }
+            break;
+        //Top
+        case 4:
+            cout << "Top : " << endl;
+            //IN-IN
+            if(y1 <= ywMax && y2 <= ywMax)
+            {
+                cout << "IN-IN" <<endl;
+                cout << "x2 : " << x2 << " y2 : " << y2 << endl;
+                res.push_back(make_pair(x2, y2));
+            }
+            else if(y1 <= ywMax && y2>ywMax )
+            {//in-out
+                cout << "IN-OUT" <<endl;
+                float slope = (y2 - y1)/(x2 - x1);
+                intersect_y = ywMax;
+                if(x1 != x2)
+                    intersect_x = x2 + (ywMax - y2)/slope;
+                else
+                    intersect_x = x2;
+                cout << "Intersect x : " << intersect_x << " Intersect_y : " << intersect_y << endl;
+                res.push_back(make_pair(intersect_x, intersect_y));
+            }
+            else if(y1 > ywMax && y2<=ywMax)
+            {//out-in
+                cout << "OUT-IN" <<endl;
+                float slope = (y2 - y1)/(x2 - x1);
+                intersect_y = ywMax;
+                if(x1 != x2)
+                    intersect_x = x2 + (ywMax - y2)/slope;
+                else
+                    intersect_x = x2;
+                cout << "Intersect x : " << intersect_x << " Intersect_y : " << intersect_y  << " x2 : " << x2 << " y2 : " << y2 << endl;
+                res.push_back(make_pair(intersect_x, intersect_y));
+                res.push_back(make_pair(x2, y2));
+            }
+            else
+            {
+                cout << "OUT - OUT" <<endl;
+                cout << "x1 : " << x1 << "y1 : " << y1 << "x2 : " << x2 << "y2 : " << y2 << endl;
+            }
+            break;
+    }
+}
+
+void sutherlandHodgeman()
+{
+    //Left
+    for(int i = 0; i<polygon.size()-1; i++)
+    {
+        clipPoints(polygon[i].first, polygon[i].second, polygon[i+1].first, polygon[i+1].second, 1);
+    }
+    //Bottom - Right - Top
+    for(int j=2; j<5; j++)
+    {
+        temp = res;
+        temp.push_back(make_pair(res[0].first, res[0].second));
+        res.clear();
+        for(int i = 0; i<temp.size()-1; i++)
+        {
+            clipPoints(temp[i].first, temp[i].second, temp[i+1].first, temp[i+1].second, j);
+        }
+    }
+    temp = res;
+    for(int i=0; i<temp.size(); i++)
+    {
+        cout << "Final x:" << temp[i].first << "Final y: " <<temp[i].second <<endl;
+    }
+}
+
+void mouseHandling(int button, int state, int x, int y)
+{
+    if(button == GLUT_LEFT && state == GLUT_DOWN)
+    {
+        y = SCREEN_HEIGHT-y;
+        cout << "X coord : " << x << " Y coord : " << y<<endl;
+        if(winVertices < 2)
+        {
+            window.push_back(make_pair(x,y));
+            winVertices+=1;
+        }
+        if(winVertices == 2)
+        {
+            xwMax = max(window[winVertices-1].first, window[winVertices-2].first);
+            xwMin = min(window[winVertices-1].first, window[winVertices-2].first);
+            ywMax = max(window[winVertices-1].second, window[winVertices-2].second);
+            ywMin = min(window[winVertices-1].second, window[winVertices-2].second);
+            drawWindow();
+            winVertices = 3;
+        }
+        else if(winVertices == 3)
+        {
+            polygon.push_back(make_pair(x,y));
+            polyVertices+= 1;
+        }
+    }
+    if(button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
+    {
+        polygon.push_back(make_pair(polygon[0].first, polygon[0].second));
+        drawPolygon(polygon);
+        sutherlandHodgeman();
+    }
+}
+
+void keyboard(unsigned char key, int x, int y)
+{
+    if(key == 'c')
+    {
+        glClear(GL_COLOR_BUFFER_BIT);
+        drawWindow();
+        glBegin(GL_POLYGON);
+        glColor3f(1,0,0);
+            for(int i=0; i<temp.size(); i++)
+            {
+                glVertex2f(temp[i].first, temp[i].second);
+            }
+        glEnd();
+        glFlush();
+    }
+    /*
+    switch(key)
+    {
+
+        case 'c':
+        glClear(GL_COLOR_BUFFER_BIT);
+        drawWindow();
+        glBegin(GL_POLYGON);
+        glColor3f(1,0,0);
+            for(int i=0; i<temp.size(); i++)
+            {
+                glVertex2f(temp[i].first, temp[i].second);
+            }
+        glEnd();
+        glFlush();
+        break;
+        case 'v':
+        glClear(GL_COLOR_BUFFER_BIT);
+        drawWindow();
+        drawPolygon(polygon);
+        break;
+        */
+}
+
+int main(int argc, char *argv[])
+{
+    glutInit(&argc, argv);
+    glutInitWindowSize(640,480);
+    glutInitWindowPosition(10,10);
+    glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE);
+
+    glutCreateWindow("Sutherland Hodgeman");
+    glutDisplayFunc(display);
+    init();
+    glutMouseFunc(mouseHandling);
+    glutKeyboardFunc(keyboard);
+    glClearColor(0,0,0,1);
+
+    glutMainLoop();
+
+    return EXIT_SUCCESS;
+}
